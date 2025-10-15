@@ -338,8 +338,15 @@ const view = () => {
 }
 
   //переписать одну задачу по id по узлу (весь элемент)
-  function updateTaskRow() {}
-
+  function updateTaskRow(id) {}
+    const task = model.getState().find((item) => item.id === id )
+    const node = elm.categoryList.querySelector(`.task[data-id="${id}"]`)
+  //реализует поиск нужн эл-та в списке по атрибуту data-id
+  //`.category[data-id="${id}"]` это класс
+  if(!task || !node){
+    return renderCategoryList(model.getState())
+  }
+  node.outerHTML = renderTask(task)
   return {
     renderControls,
     renderCategoryList,
@@ -352,11 +359,24 @@ const view = () => {
 
 // взаимодействие пользовательский действий с моделью (бизнес-логикой) и представлением
 const controller = (() => {
+  const {elm} = view
+  // const elm = view.elm то же самое
   // первичный рендер, биндинг обработчиков (связать логику обработчиков) и подписка на Storage
-  function init() {}
-
+  function init() {
+    view.renderControls()
+  }
+  
   // обработчик формы создания категории (валидаци + submit)
-  function bindFormCreateCategory() {}
+  function bindFormCreateCategory() {
+    const input = elm.inputNewCategory
+    const btn  = elm.btnCreateCategory
+    const error = document.querySelector('#newCategoryError')
+    input.addEventListener('input', () => {
+      const names = new Set(model.getState().categories.map((item) => item.name.toLowerCase()))
+      const v = validators.validateCategoryName(input.value, names)
+      error.textContent = v.ok ? '' : v.msg
+    })
+  }
   // обработчик формы добавления задачи (валидация поля + выбор категории)
   function bindFormAddTask() {}
   // обработчик удаления категории (подтверждение + обновление UI)
