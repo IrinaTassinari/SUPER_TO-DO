@@ -371,19 +371,96 @@ const controller = (() => {
     const input = elm.inputNewCategory
     const btn  = elm.btnCreateCategory
     const error = document.querySelector('#newCategoryError')
+    const createCategory = document.querySelector('#formCreateCategory')
     input.addEventListener('input', () => {
+      //созд-е колле-ии уникальн категорий (нижний ргистр)
       const names = new Set(model.getState().categories.map((item) => item.name.toLowerCase()))
+      // проверка на сущ-е эл-та в списке категорий
       const v = validators.validateCategoryName(input.value, names)
       error.textContent = v.ok ? '' : v.msg
+      btn.disabled = !v.ok
+    })
+    createCategory.addEventListener('submit', (e) => {
+      e.preventDefault()
+      const res = model.addCategory(input.value)
+      if(!res.ok) return
+      input.value = ''
+      btn.disabled = true
+      view.renderControls(model.getState())
+      view.renderCategoryList(model.getState())
     })
   }
   // обработчик формы добавления задачи (валидация поля + выбор категории)
-  function bindFormAddTask() {}
+  function bindFormAddTask() {
+    const input = elm.inputNewTask
+    const btn  = elm.btnCreateTask
+    const error = document.querySelector('#newTaskError')
+    const createTask = document.querySelector('#formAddTask')
+    title.addEventListener('input', () => {
+      // проверка на сущ-е эл-та в списке категорий
+      const v = validators.validateCategoryName(title.value)
+      error.textContent = v.ok ? '' : v.msg
+      btn.disabled = !v.ok || !elm.selectCategory.value
+    })
+    elm.selectCategory.addEventListener('change',() => {
+      const v = validators.validateCategoryName(title.value)
+      btn.disabled = !v.ok || !elm.selectCategory.value
+    })
+     createTask.addEventListener('submit', (e) => {
+      e.preventDefault()
+      const catId = elm.selectCategory.value
+      if(!catId) return
+      const res = model.addTask(catId, title.value)
+      if(!res.ok) return
+      title.value = ''
+      btn.disabled = true
+      view.updateCategory(catId)
+    })
+  }
   // обработчик удаления категории (подтверждение + обновление UI)
-  function bindFormRemoveCategory() {}
+  function bindFormRemoveCategory() {
+    const formRemoveCategory = document.querySelector('#formRemoveCategory')
+    formRemoveCategory.addEventListener('submit', (e) => {
+      e.preventDefault()
+      const id = elm.deleteCategory.value
+      if(!id) return
+      //надо найти в списке категорий есть ли та категория, которую надо удалить
+      //поиск  удаляемой категории
+      const cat = model.getstate().categories.find(item => item.id === id)
+      //счетчик удаляемых категорий и тасков
+      const count = model.getState().tasks.filter(item => item.categoryId === id).length
+      const msg = count ? `Delete "${cat.name}" and ${count} tasks` : `Delete "${cat.name}"`
+      //отоюражение модального modal окна (подтверждение)
+      ui.confirm(msg).then((res) => {
+        if(!res) return
+        model.removeCategory(id)
+        view.renderControls(model.getState())
+        view.renderCategoryList(model.getState())
+      })
+    })
+  }
 
   //делегирование событий в списке (сворачивание, переименование, удаление состояний checkbox)
-  function bindListHandlers() {}
+  function bindListHandlers() {
+    const catList = document.querySelector('#categoryList')
+    catList.addEventListener('click', (e) => {
+      const target = e.target
+      const catNode = target.closest('.category')
+      if(!catNode) return
+      const catId = catNode.getAttribute('data-id')
+      if(target.matches('[data-action="toggle"]')){
+        const body = catNode.querySelector('.category_body')
+        const btn = target
+        const willCollapsed = !body.hasAttribute('hidden')
+        body.toggleAttribute('hidden')
+        btn.setAttribute('aria-expanded', !body.hasAttribute('hidden') ? 'false' : 'true')
+        model.setCollapsed(catId, willCollapsed)
+      }
+      if(target.matches('[data-action="rename_cat"]')){
+        inlineRenameCategoty(catId, catNode)
+      }
+    })
+  }
   // inline переименование категории (замена заголовка категории на input с валидацией)
   function inlineRenameCategoty(cartId, catNode) {}
 
