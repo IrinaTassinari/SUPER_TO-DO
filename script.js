@@ -521,7 +521,7 @@ const controller = (() => {
   // inline переименование заголовка задачи (с сохранением)
   function inlineRenameTask(taskId) {
     const row = document.querySelector(`.task[data-id="${taskId}"]`)
-    const titleElem = row.querySelector('[data-role="task-title"]') ///!!!
+    const titleElem = row.querySelector('[data-role="task-title"]') 
     const initial = titleElem.textContent 
     const input = document.createElement('input')
     input.className = 'input'
@@ -551,7 +551,7 @@ const controller = (() => {
   function bindWipeAll() {}
   const wipeAll = document.querySelector('#wipeAll')
   wipeAll.addEventListener('click', async () =>{
-    const ok = await ui.confirm('сюолсить все данные?/ Wipe all data?')
+    const ok = await ui.confirm('Wipe all data?')
     if (!ok) return
     const empty = storage.migrate(null)
     localStorage.setItem('todo.v1', JSON.stringify(empty))
