@@ -363,7 +363,18 @@ const controller = (() => {
   // const elm = view.elm то же самое
   // первичный рендер, биндинг обработчиков (связать логику обработчиков) и подписка на Storage
   function init() {
-    view.renderControls()
+    view.renderControls(model.getState())
+    view.renderCategoryList(model.getState())
+    bindFormCreateCategory()
+    bindFormAddTask()
+    bindFormRemoveCategory()
+    bindListHandlers()
+    inlineRenameCategoty()
+    inlineRenameTask()
+    bindWipeAll()
+    storage.subscribe((st) => {
+      view.renderControls(st)
+    })
   }
   
   // обработчик формы создания категории (валидаци + submit)
@@ -459,27 +470,94 @@ const controller = (() => {
       if(target.matches('[data-action="rename_cat"]')){
         inlineRenameCategoty(catId, catNode)
       }
+      if(target.matches('[data-action="rename_task"]')){
+        const taskId = target.closest('.task').getAttribute('data-id')
+        inlineRenameTask(taskId)
+      }
+      if(target.matches('[data-action="delete_task"]')){
+        const taskId = target.closest('.task').getAttribute('data-id')
+        const task = model.getState().tasks.find(item => item.id === taskId)
+        model.toggleTask(taskId)
+        view.updateCategory(task.categoryId)
+      }
+      catList.addEventListener('change', (e) => {
+        const target = e.target
+        if(target.matches('.task_check')){
+          const taskId = target.closest('.task').getAttribute('data-id')
+          const task = model.getState().tasks.find(item => item.id === taskId)
+          model.toggleTask(taskId)
+          view.updateCategory(task.categoryId)
+        }     
+      })
     })
   }
   // inline переименование категории (замена заголовка категории на input с валидацией)
-  function inlineRenameCategoty(cartId, catNode) {}
+  function inlineRenameCategoty(catId, catNode) {
+    const titleElem = catNode.querySelector('[data-role=cat_title]')
+    const initial = titleElem.textContent 
+    const input = document.createElement('input')
+    input.className = 'input'
+    input.value = initial
+    input.setAttribute('aria-label', 'Rename Category')
+    titleElem.replaceWith(input)
+    const finish = (save) => {
+      if (save) {
+        const res = model.renameCategory(catId, input.value)
+        if (!res.ok) {
+          input.setCustomValidity(res.msg)
+          input.reportValidity()
+          return
+        }
+      }
+      view.updateCategory(catId)
+  }
+  input.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter') finish(true)
+    if(e.key === 'Escape') finish(false)
+  })
+  input.addEventListener('blur', () => finish(true))
+  }
 
   // inline переименование заголовка задачи (с сохранением)
-  function inlineRenameTask(taskId) {}
+  function inlineRenameTask(taskId) {
+    const row = document.querySelector(`.task[data-id="${taskId}"]`)
+    const titleElem = row.querySelector('[data-role="task-title"]') ///!!!
+    const initial = titleElem.textContent 
+    const input = document.createElement('input')
+    input.className = 'input'
+    input.value = initial
+    input.setAttribute('aria-label', 'Rename Category')
+    titleElem.replaceWith(input)
+    const task = model.getState().tasks.find(item => item.id === taskId)
+    const finish = (save) => {
+      if (save) {
+        const res = model.renameTask(taskId, input.value)
+        if (!res.ok) {
+          input.setCustomValidity(res.msg)
+          input.reportValidity()
+          return
+        }
+      }
+      view.updateCategory(task.categoryId)
+  }
+  input.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter') finish(true)
+    if(e.key === 'Escape') finish(false)
+  })
+  input.addEventListener('blur', () => finish(true))
+  }
 
   // сбросить всё
   function bindWipeAll() {}
-
-  return {
-    init,
-    bindFormCreateCategory,
-    bindFormAddTask,
-    bindFormRemoveCategory,
-    bindListHandlers,
-    inlineRenameCategoty,
-    inlineRenameTask,
-    bindWipeAll,
-  };
+  const wipeAll = document.querySelector('#wipeAll')
+  wipeAll.addEventListener('click', async () =>{
+    const ok = await ui.confirm('сюолсить все данные?/ Wipe all data?')
+    if (!ok) return
+    const empty = storage.migrate(null)
+    localStorage.setItem('todo.v1', JSON.stringify(empty))
+    location.reload()
+  })
+  return init 
 })();
 
 // небольшие вспомогательные функции интерфейса (баннеры, вспомогательные функции)
