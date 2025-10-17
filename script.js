@@ -41,6 +41,7 @@ const validators = (() => {
     // проверка существет ли уже такая категория
     if (existingNamesLower && existingNamesLower.has(trimmed.toLowerCase()))
       return { ok: false, msg: "Category already exists" };
+      return {ok:true}
   }
 
   // удаление лишнего и проверка длины в TaskTitle
@@ -48,6 +49,7 @@ const validators = (() => {
     const trimmed = String(taskTitle || "").trim();
     if (trimmed.length < 2 || trimmed.length > 140)
       return { ok: false, msg: "2 to 140 symbols" };
+      return {ok:true}
   }
   return { validateCategoryName, validateTaskTitle };
 })();
@@ -109,8 +111,8 @@ const storage = (() => {
   return { load, save, subscribe, migrate };
 })();
 
-const model = () => {
-  //бизнес логика, операции над состоянием (обновлениеб удаление)
+const model = (() => {
+    //бизнес логика, операции над состоянием (обновлениеб удаление)
   let state = storage.load();
 
   // проверка текущего состояния из localStorage
@@ -197,7 +199,7 @@ const model = () => {
   }
   function toggleTask(id) {
     const tasks = state.tasks.map((item) =>
-      item.id === id ? { ...item, done: !done, updatedAt: Date.now() } : item
+      item.id === id ? { ...item, done: !item.done, updatedAt: Date.now() } : item
     );
 
     setState({ ...state, tasks });
@@ -247,9 +249,10 @@ const model = () => {
     removeTask,
     setCollapsed,
   };
-};
+})()
 
-const view = () => {
+
+const view = (() => {
   const elm = {
     categoryList: document.querySelector("#categoryList"),
     selectCategory: document.querySelector("#selectCategory"),
@@ -338,8 +341,8 @@ const view = () => {
 }
 
   //переписать одну задачу по id по узлу (весь элемент)
-  function updateTaskRow(id) {}
-    const task = model.getState().find((item) => item.id === id )
+  function updateTaskRow(id) {
+    const task = model.getState().tasks.find((item) => item.id === id )
     const node = elm.categoryList.querySelector(`.task[data-id="${id}"]`)
   //реализует поиск нужн эл-та в списке по атрибуту data-id
   //`.category[data-id="${id}"]` это класс
@@ -347,7 +350,9 @@ const view = () => {
     return renderCategoryList(model.getState())
   }
   node.outerHTML = renderTask(task)
+  }
   return {
+    elm,
     renderControls,
     renderCategoryList,
     renderCategory,
@@ -355,7 +360,7 @@ const view = () => {
     updateCategory,
     updateTaskRow,
   };
-};
+})();
 
 // взаимодействие пользовательский действий с моделью (бизнес-логикой) и представлением
 const controller = (() => {
@@ -369,7 +374,7 @@ const controller = (() => {
     bindFormAddTask()
     bindFormRemoveCategory()
     bindListHandlers()
-    inlineRenameCategoty()
+    inlineRenameCategory()
     inlineRenameTask()
     bindWipeAll()
     storage.subscribe((st) => {
@@ -403,7 +408,7 @@ const controller = (() => {
   }
   // обработчик формы добавления задачи (валидация поля + выбор категории)
   function bindFormAddTask() {
-    const input = elm.inputNewTask
+    const title = elm.newTask
     const btn  = elm.btnCreateTask
     const error = document.querySelector('#newTaskError')
     const createTask = document.querySelector('#formAddTask')
@@ -437,7 +442,7 @@ const controller = (() => {
       if(!id) return
       //надо найти в списке категорий есть ли та категория, которую надо удалить
       //поиск  удаляемой категории
-      const cat = model.getstate().categories.find(item => item.id === id)
+      const cat = model.getState().categories.find(item => item.id === id)
       //счетчик удаляемых категорий и тасков
       const count = model.getState().tasks.filter(item => item.categoryId === id).length
       const msg = count ? `Delete "${cat.name}" and ${count} tasks` : `Delete "${cat.name}"`
@@ -457,6 +462,7 @@ const controller = (() => {
     catList.addEventListener('click', (e) => {
       const target = e.target
       const catNode = target.closest('.category')
+      // console.log(catNode)
       if(!catNode) return
       const catId = catNode.getAttribute('data-id')
       if(target.matches('[data-action="toggle"]')){
@@ -468,7 +474,7 @@ const controller = (() => {
         model.setCollapsed(catId, willCollapsed)
       }
       if(target.matches('[data-action="rename_cat"]')){
-        inlineRenameCategoty(catId, catNode)
+        inlineRenameCategory(catId, catNode)
       }
       if(target.matches('[data-action="rename_task"]')){
         const taskId = target.closest('.task').getAttribute('data-id')
@@ -477,7 +483,7 @@ const controller = (() => {
       if(target.matches('[data-action="delete_task"]')){
         const taskId = target.closest('.task').getAttribute('data-id')
         const task = model.getState().tasks.find(item => item.id === taskId)
-        model.toggleTask(taskId)
+        model.removeTask(taskId)
         view.updateCategory(task.categoryId)
       }
       catList.addEventListener('change', (e) => {
@@ -492,7 +498,8 @@ const controller = (() => {
     })
   }
   // inline переименование категории (замена заголовка категории на input с валидацией)
-  function inlineRenameCategoty(catId, catNode) {
+  function inlineRenameCategory(catId, catNode) {
+    console.log(catNode)
     const titleElem = catNode.querySelector('[data-role=cat_title]')
     const initial = titleElem.textContent 
     const input = document.createElement('input')
@@ -558,7 +565,7 @@ const controller = (() => {
     localStorage.setItem('todo.v1', JSON.stringify(empty))
     location.reload()
   })
-  return init 
+  return {init}
 })();
 
 // небольшие вспомогательные функции интерфейса (баннеры, вспомогательные функции)
@@ -578,6 +585,7 @@ const ui = () => {
         yes.removeEventListener('click', onYes)
         no.removeEventListener('click', onNo)
         modal.removeEventListener('keydown', onKey)
+        resolve(value)
       }
       function onYes(){
         done(true)
