@@ -499,8 +499,7 @@ const controller = (() => {
   }
   // inline переименование категории (замена заголовка категории на input с валидацией)
   function inlineRenameCategory(catId, catNode) {
-    console.log(catNode)
-    const titleElem = catNode.querySelector('[data-role="cat_title"]')
+    const titleElem = document.querySelector('[data-role="cat_title"]')
     const initial = titleElem.textContent 
     const input = document.createElement('input')
     input.className = 'input'
